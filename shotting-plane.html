@@ -1,108 +1,168 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Quidditch Seeker | Final Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quidditch Seeker | Final Working Version</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #000; color: #d4af37; font-family: 'Cinzel Decorative', cursive; overflow: hidden; }
-        #ui { position: absolute; top: 10px; width: 100%; display: flex; justify-content: space-around; font-size: 20px; z-index: 10; text-shadow: 2px 2px #000; }
-        canvas { display: block; background: radial-gradient(circle, #1a1b3a, #000); }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background: #000; 
+            overflow: hidden; /* No scrollbars */
+            font-family: 'Cinzel Decorative', cursive; 
+        }
+        
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 80px;
+            background: rgba(20, 20, 20, 0.8);
+            border-bottom: 2px solid #d4af37;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 10;
+            color: #d4af37;
+        }
+
+        .stat-box { font-size: 1.5rem; text-shadow: 0 0 10px #d4af37; }
+        .btn-back { color: white; text-decoration: none; border: 1px solid #d4af37; padding: 10px 20px; border-radius: 5px; }
+        .btn-back:hover { background: #d4af37; color: black; }
+
+        canvas { display: block; background: radial-gradient(circle, #1a1b3a 0%, #000 100%); }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <span>SCORE: <span id="score">0</span></span>
-        <span>MANA: <span id="mana">100</span></span>
+
+    <div id="ui-layer">
+        <a href="index.html" class="btn-back">⬅ EXIT</a>
+        <div class="stat-box">SCORE: <span id="scoreDisplay">0</span></div>
+        <div style="font-size: 0.9rem; color: #aaa;">Arrow Keys: Fly | Space: Spell</div>
     </div>
-    <canvas id="canvas"></canvas>
+
+    <canvas id="gameCanvas"></canvas>
 
     <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreEl = document.getElementById("scoreDisplay");
 
+        // 1. Setup Canvas to fill screen
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // 2. Game Variables
         let score = 0;
-        let player = { x: 100, y: canvas.height/2, w: 80, h: 30 };
+        let player = { x: 100, y: 300, width: 80, height: 30, speed: 8 };
         let bullets = [];
         let enemies = [];
         let keys = {};
 
-        window.onkeydown = e => keys[e.code] = true;
-        window.onkeyup = e => keys[e.code] = false;
+        // 3. Input Handling
+        window.addEventListener("keydown", function(e) { keys[e.code] = true; });
+        window.addEventListener("keyup", function(e) { keys[e.code] = false; });
 
-        function update() {
-            if (keys['ArrowUp'] && player.y > 50) player.y -= 7;
-            if (keys['ArrowDown'] && player.y < canvas.height - 50) player.y += 7;
-            if (keys['Space']) {
-                bullets.push({ x: player.x + 80, y: player.y + 15 });
-                keys['Space'] = false; // 防止連發
+        // 4. The Game Loop
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear screen
+
+            // --- PLAYER LOGIC ---
+            if (keys["ArrowUp"] && player.y > 80) player.y -= player.speed;
+            if (keys["ArrowDown"] && player.y < canvas.height - 50) player.y += player.speed;
+            
+            // Shooting (Semi-automatic)
+            if (keys["Space"]) {
+                bullets.push({ x: player.x + 60, y: player.y + 10, w: 20, h: 10, color: "#00f3ff" });
+                keys["Space"] = false; // Force player to press again
             }
 
-            // 咒語邏輯
-            bullets.forEach((b, bi) => {
-                b.x += 12;
-                if (b.x > canvas.width) bullets.splice(bi, 1);
-            });
-
-            // 敵方博格邏輯
-            if (Math.random() < 0.04) {
-                enemies.push({ x: canvas.width, y: Math.random() * (canvas.height - 60) + 30, r: 20 });
-            }
-
-            enemies.forEach((e, ei) => {
-                e.x -= 6;
-                
-                // --- 碰撞偵測（修復核心） ---
-                bullets.forEach((b, bi) => {
-                    // 計算咒語同敵人之間嘅距離
-                    let dist = Math.hypot(b.x - e.x, b.y - e.y);
-                    if (dist < e.r + 10) { // 如果距離細過半徑，即係打中
-                        enemies.splice(ei, 1);
-                        bullets.splice(bi, 1);
-                        score += 10;
-                        document.getElementById('score').innerText = score;
-                    }
-                });
-
-                if (e.x < -30) enemies.splice(ei, 1);
-            });
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 畫玩家（飛天掃帚）
-            ctx.fillStyle = "#8b4513";
-            ctx.fillRect(player.x, player.y + 10, 60, 10);
-            ctx.fillStyle = "#d4af37";
+            // Draw Player (Broomstick)
+            ctx.fillStyle = "#8b4513"; // Brown wood
+            ctx.fillRect(player.x, player.y, player.width, player.height/2); 
+            ctx.fillStyle = "#d4af37"; // Gold tail
             ctx.beginPath();
-            ctx.moveTo(player.x, player.y + 15);
-            ctx.lineTo(player.x - 30, player.y);
-            ctx.lineTo(player.x - 30, player.y + 30);
+            ctx.moveTo(player.x, player.y + 5);
+            ctx.lineTo(player.x - 30, player.y - 10);
+            ctx.lineTo(player.x - 30, player.y + 20);
             ctx.fill();
 
-            // 畫咒語
-            ctx.fillStyle = "#00f3ff";
-            ctx.shadowBlur = 10; ctx.shadowColor = "#00f3ff";
-            bullets.forEach(b => {
-                ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, Math.PI*2); ctx.fill();
-            });
+            // --- BULLET LOGIC ---
+            for (let i = 0; i < bullets.length; i++) {
+                let b = bullets[i];
+                b.x += 15; // Bullet speed
+                
+                // Draw Bullet
+                ctx.fillStyle = b.color;
+                ctx.shadowBlur = 10; ctx.shadowColor = b.color;
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+                ctx.shadowBlur = 0;
 
-            // 畫敵人（博格）
-            ctx.fillStyle = "#444";
-            ctx.shadowColor = "red";
-            enemies.forEach(e => {
-                ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill();
-                ctx.strokeStyle = "white"; ctx.stroke();
-            });
+                // Remove off-screen bullets
+                if (b.x > canvas.width) {
+                    bullets.splice(i, 1);
+                    i--;
+                }
+            }
 
-            ctx.shadowBlur = 0;
-            update();
-            requestAnimationFrame(draw);
+            // --- ENEMY LOGIC (Bludgers) ---
+            if (Math.random() < 0.03) { // Spawn rate
+                enemies.push({ 
+                    x: canvas.width, 
+                    y: Math.random() * (canvas.height - 100) + 80, 
+                    w: 30, h: 30, 
+                    speed: Math.random() * 5 + 3 
+                });
+            }
+
+            for (let i = 0; i < enemies.length; i++) {
+                let e = enemies[i];
+                e.x -= e.speed;
+
+                // Draw Enemy
+                ctx.fillStyle = "#444";
+                ctx.beginPath(); 
+                ctx.arc(e.x + e.w/2, e.y + e.h/2, e.w/2, 0, Math.PI*2); 
+                ctx.fill();
+                ctx.strokeStyle = "red"; ctx.lineWidth = 2; ctx.stroke();
+
+                // --- COLLISION DETECTION (Box Method) ---
+                // This checks if Bullet hits Enemy
+                for (let j = 0; j < bullets.length; j++) {
+                    let b = bullets[j];
+                    if (b.x < e.x + e.w &&
+                        b.x + b.w > e.x &&
+                        b.y < e.y + e.h &&
+                        b.y + b.h > e.y) {
+                        
+                        // HIT!
+                        score += 10;
+                        scoreEl.innerText = score;
+                        enemies.splice(i, 1);
+                        bullets.splice(j, 1);
+                        i--; // Adjust index since we removed an enemy
+                        break;
+                    }
+                }
+
+                // Remove off-screen enemies
+                if (e.x < -50) {
+                    enemies.splice(i, 1);
+                    i--;
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
         }
-        draw();
+
+        // Start the game
+        gameLoop();
     </script>
 </body>
 </html>

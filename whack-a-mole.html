@@ -1,241 +1,70 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>Quidditch Seeker | Full Magic Edition</title>
+    <title>Defense Against the Dark Arts</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            background: #050505; 
-            color: #d4af37; 
-            font-family: 'Cinzel Decorative', cursive; 
-            overflow: hidden;
-            height: 100vh;
+        body { background: #1a120b; color: #d4af37; font-family: 'Cinzel Decorative', cursive; text-align: center; margin: 0; overflow: hidden; }
+        .grid { display: grid; grid-template-columns: repeat(3, 130px); gap: 20px; justify-content: center; margin-top: 40px; }
+        .hole { 
+            width: 130px; height: 130px; background: #000; border-radius: 50%; 
+            position: relative; overflow: hidden; border: 4px solid #d4af37;
+            box-shadow: inset 0 10px 20px #000;
         }
-
-        /* The Game HUD (Heads-up Display) */
-        #hud {
-            position: absolute;
-            top: 0; width: 100%;
-            height: 80px;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-            z-index: 10;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+        /* 呢度係優化咗嘅「地鼠」：變成了食死人面具 */
+        .mole { 
+            width: 90px; height: 110px; background: #e0e0e0; 
+            border-radius: 40% 40% 50% 50%; position: absolute; left: 20px; top: 130px; 
+            transition: top 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            cursor: crosshair; border: 2px solid #555;
+            background-image: radial-gradient(circle at 30% 30%, #222 10px, transparent 10px), 
+                              radial-gradient(circle at 70% 30%, #222 10px, transparent 10px); /* 眼窩 */
         }
-
-        #gameCanvas {
-            display: block;
-            background: radial-gradient(circle at center, #1a1b3a 0%, #050505 100%);
-        }
-
-        .stats { font-size: 1.5rem; text-shadow: 0 0 10px #d4af37; }
-        .back-btn { color: #fff; text-decoration: none; border: 1px solid #d4af37; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; }
-        .back-btn:hover { background: #d4af37; color: black; }
+        .mole::after { content: "💀"; position: absolute; top: 40px; left: 30px; font-size: 25px; opacity: 0.3; }
+        .mole.up { top: 15px; }
+        .hit-effect { position: absolute; color: #00f3ff; font-weight: bold; animation: floatUp 0.5s forwards; pointer-events: none; }
+        @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-50px); } }
     </style>
 </head>
 <body>
-
-    <div id="hud">
-        <a href="index.html" class="back-btn">⬅ LEAVE PITCH</a>
-        <div class="stats">SCORE: <span id="score">0</span></div>
-        <div class="stats">HP: <span id="hp">100</span></div>
-    </div>
-
-    <canvas id="gameCanvas"></canvas>
+    <h1 style="margin-top:30px;">Dark Arts Defense</h1>
+    <h2>SCORE: <span id="score">0</span></h2>
+    <div class="grid" id="gameGrid"></div>
+    <p><a href="index.html" style="color:#d4af37; text-decoration:none; border:1px solid #d4af37; padding:10px; display:inline-block; margin-top:20px;">Return to Hogwarts</a></p>
 
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const scoreEl = document.getElementById("score");
-        const hpEl = document.getElementById("hp");
+        const grid = document.getElementById('gameGrid');
+        let score = 0;
+        for(let i=0; i<6; i++) grid.innerHTML += `<div class="hole"><div class="mole"></div></div>`;
+        const moles = document.querySelectorAll('.mole');
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        // --- Game State ---
-        let gameState = {
-            score: 0,
-            hp: 100,
-            active: true,
-            stars: []
-        };
-
-        // --- Player Object ---
-        let player = {
-            x: 100, y: canvas.height / 2,
-            w: 80, h: 30,
-            speed: 8,
-            targetY: canvas.height / 2
-        };
-
-        let spells = [];
-        let enemies = [];
-        let particles = [];
-
-        // --- Initialization: Create a Starfield ---
-        for(let i=0; i<100; i++) {
-            gameState.stars.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                s: Math.random() * 2,
-                v: Math.random() * 3 + 1
-            });
+        function hit(e) {
+            score += 10;
+            document.getElementById('score').innerText = score;
+            this.classList.remove('up');
+            // 增加咒語文字特效
+            const effect = document.createElement('div');
+            effect.className = 'hit-effect';
+            effect.innerText = 'STUPEFY!';
+            effect.style.left = event.pageX + 'px';
+            effect.style.top = event.pageY + 'px';
+            document.body.appendChild(effect);
+            setTimeout(() => effect.remove(), 500);
         }
 
-        // --- Input Handling ---
-        let keys = {};
-        window.onkeydown = (e) => keys[e.code] = true;
-        window.onkeyup = (e) => keys[e.code] = false;
+        moles.forEach(m => m.addEventListener('mousedown', hit));
 
-        // --- Logic Functions ---
-        function createExplosion(x, y, color) {
-            for(let i=0; i<15; i++) {
-                particles.push({
-                    x, y,
-                    dx: (Math.random() - 0.5) * 8,
-                    dy: (Math.random() - 0.5) * 8,
-                    life: 1.0,
-                    color
-                });
-            }
+        function peep() {
+            const time = Math.random() * 800 + 400;
+            const mole = moles[Math.floor(Math.random() * moles.length)];
+            mole.classList.add('up');
+            setTimeout(() => {
+                mole.classList.remove('up');
+                if (true) peep();
+            }, time);
         }
-
-        function spawnEnemy() {
-            if (Math.random() < 0.03) {
-                enemies.push({
-                    x: canvas.width + 50,
-                    y: Math.random() * (canvas.height - 100) + 50,
-                    size: 20 + Math.random() * 20,
-                    speed: 4 + Math.random() * 4
-                });
-            }
-        }
-
-        function update() {
-            if (!gameState.active) return;
-
-            // Move Player
-            if (keys["ArrowUp"] && player.y > 100) player.y -= player.speed;
-            if (keys["ArrowDown"] && player.y < canvas.height - 50) player.y += player.speed;
-
-            // Shoot Magic (Space)
-            if (keys["Space"]) {
-                spells.push({ x: player.x + player.w, y: player.y + 15 });
-                keys["Space"] = false; // Semi-auto fire
-            }
-
-            // Move Stars (Background)
-            gameState.stars.forEach(s => {
-                s.x -= s.v;
-                if(s.x < 0) s.x = canvas.width;
-            });
-
-            // Move Spells
-            spells.forEach((s, i) => {
-                s.x += 15;
-                if (s.x > canvas.width) spells.splice(i, 1);
-            });
-
-            // Move Enemies & Collision
-            enemies.forEach((e, i) => {
-                e.x -= e.speed;
-
-                // Collision with player
-                if (Math.hypot(player.x - e.x, player.y - e.y) < e.size + 20) {
-                    gameState.hp -= 20;
-                    hpEl.innerText = gameState.hp;
-                    createExplosion(e.x, e.y, "#ff0000");
-                    enemies.splice(i, 1);
-                    if (gameState.hp <= 0) {
-                        gameState.active = false;
-                        alert("Wasted! Your Score: " + gameState.score);
-                        location.reload();
-                    }
-                }
-
-                // Collision with spells
-                spells.forEach((s, si) => {
-                    if (Math.hypot(s.x - e.x, s.y - e.y) < e.size) {
-                        createExplosion(e.x, e.y, "#d4af37");
-                        enemies.splice(i, 1);
-                        spells.splice(si, 1);
-                        gameState.score += 10;
-                        scoreEl.innerText = gameState.score;
-                    }
-                });
-
-                if (e.x < -100) enemies.splice(i, 1);
-            });
-
-            // Update Particles
-            particles.forEach((p, i) => {
-                p.x += p.dx; p.y += p.dy;
-                p.life -= 0.02;
-                if(p.life <= 0) particles.splice(i, 1);
-            });
-
-            spawnEnemy();
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 1. Draw Starfield
-            ctx.fillStyle = "white";
-            gameState.stars.forEach(s => {
-                ctx.globalAlpha = s.s / 2;
-                ctx.fillRect(s.x, s.y, s.s, s.s);
-            });
-            ctx.globalAlpha = 1.0;
-
-            // 2. Draw Player (Broomstick with Glow)
-            ctx.shadowBlur = 20; ctx.shadowColor = "#d4af37";
-            ctx.fillStyle = "#5d3a1a"; // Wood
-            ctx.fillRect(player.x, player.y + 10, 60, 8);
-            ctx.fillStyle = "#d4af37"; // Bristles
-            ctx.beginPath();
-            ctx.moveTo(player.x, player.y + 14);
-            ctx.lineTo(player.x - 30, player.y - 5);
-            ctx.lineTo(player.x - 30, player.y + 35);
-            ctx.fill();
-
-            // 3. Draw Spells (Stupefy)
-            ctx.shadowColor = "#00f3ff";
-            ctx.fillStyle = "#fff";
-            spells.forEach(s => {
-                ctx.beginPath(); ctx.arc(s.x, s.y, 6, 0, Math.PI*2); ctx.fill();
-            });
-
-            // 4. Draw Enemies (Bludgers)
-            ctx.shadowColor = "#ff0000";
-            ctx.fillStyle = "#222";
-            enemies.forEach(e => {
-                ctx.beginPath(); ctx.arc(e.x, e.y, e.size/2, 0, Math.PI*2); ctx.fill();
-                ctx.strokeStyle = "#444"; ctx.stroke();
-            });
-
-            // 5. Draw Particles
-            particles.forEach(p => {
-                ctx.globalAlpha = p.life;
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x, p.y, 4, 4);
-            });
-            ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
-
-            update();
-            requestAnimationFrame(draw);
-        }
-
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
-
-        draw();
+        peep();
     </script>
 </body>
 </html>

@@ -1,113 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Hand Tracking Motion Game</title>
+    <title>Wand Mastery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-        canvas { border: 2px solid #0ff; border-radius: 10px; }
-        #video { transform: scaleX(-1); position: fixed; top: 10px; right: 10px; width: 160px; height: 120px; border: 2px solid #555; }
-        .info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; }
+        body { margin: 0; background: #000; color: #d4af37; font-family: 'Cinzel Decorative', cursive; overflow: hidden; }
+        #canvas-container { position: relative; width: 100vw; height: 100vh; }
+        canvas { width: 100%; height: 100%; object-fit: cover; }
+        .ui-overlay { position: absolute; top: 20px; left: 0; width: 100%; text-align: center; z-index: 10; pointer-events: none; }
+        .start-btn { pointer-events: auto; background: #d4af37; border: none; padding: 15px 30px; font-family: inherit; font-size: 1.2rem; cursor: pointer; border-radius: 50px; box-shadow: 0 0 20px #d4af37; }
     </style>
 </head>
 <body>
-    <div class="info">
-        <h2>Hand Motion Paddle</h2>
-        <p>Score: <span id="score">0</span></p>
-        <p>Status: <span id="status">Loading Camera...</span></p>
+    <div class="ui-overlay">
+        <h1>魔杖練習場</h1>
+        <button class="start-btn" onclick="initMagic()">✨ 握住你的魔杖 (點擊開始)</button>
+    </div>
+    <div id="canvas-container">
+        <video id="input_video" style="display:none"></video>
+        <canvas id="output_canvas"></canvas>
     </div>
 
-    <video id="video" autoplay playsinline></video>
-    <canvas id="gameCanvas"></canvas>
-
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-
     <script>
-        const videoElement = document.getElementById('video');
-        const canvasElement = document.getElementById('gameCanvas');
+        const videoElement = document.getElementById('input_video');
+        const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        const scoreElement = document.getElementById('score');
-        const statusElement = document.getElementById('status');
 
-        canvasElement.width = window.innerWidth;
-        canvasElement.height = window.innerHeight;
-
-        let score = 0;
-        let paddleX = canvasElement.width / 2;
-        let ball = { x: 100, y: 100, dx: 5, dy: 5, radius: 15 };
-
-        // 1. Setup Hand Tracking
-        const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-        });
-
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
-        hands.onResults(onResults);
-
-        // 2. Control Paddle with Hand
-        function onResults(results) {
-            statusElement.innerText = "Tracking Active";
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const hand = results.multiHandLandmarks[0];
-                // Use index finger (landmark 8) to move paddle
-                // Mirror the X coordinate
-                paddleX = (1 - hand[8].x) * canvasElement.width;
-            }
+        function initMagic() {
+            document.querySelector('.start-btn').style.display = 'none';
+            const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7 });
+            hands.onResults(onResults);
+            const camera = new Camera(videoElement, {
+                onFrame: async () => { await hands.send({image: videoElement}); },
+                width: 1280, height: 720
+            });
+            camera.start();
         }
 
-        const camera = new Camera(videoElement, {
-            onFrame: async () => { await hands.send({image: videoElement}); },
-            width: 640, height: 480
-        });
-        camera.start();
-
-        // 3. Game Logic & Animation
-        function draw() {
+        function onResults(results) {
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
+            canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // 背景深藍魔法色
+            canvasCtx.fillStyle = "rgba(10, 10, 30, 0.8)";
+            canvasCtx.fillRect(0,0, canvasElement.width, canvasElement.height);
 
-            // Draw Ball
-            canvasCtx.beginPath();
-            canvasCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
-            canvasCtx.fillStyle = "#0ff";
-            canvasCtx.fill();
-            canvasCtx.closePath();
+            if (results.multiHandLandmarks) {
+                for (const landmarks of results.multiHandLandmarks) {
+                    // 指尖座標 (Landmark 8)
+                    const x = (1 - landmarks[8].x) * canvasElement.width;
+                    const y = landmarks[8].y * canvasElement.height;
 
-            // Draw Paddle
-            canvasCtx.fillStyle = "#fff";
-            canvasCtx.fillRect(paddleX - 75, canvasElement.height - 40, 150, 20);
+                    // 1. 畫出魔法路徑
+                    canvasCtx.shadowBlur = 30;
+                    canvasCtx.shadowColor = "#ff3300";
+                    let g = canvasCtx.createRadialGradient(x, y, 0, x, y, 40);
+                    g.addColorStop(0, "white");
+                    g.addColorStop(0.2, "#ff3300");
+                    g.addColorStop(1, "transparent");
+                    
+                    canvasCtx.fillStyle = g;
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(x, y, 40, 0, Math.PI*2);
+                    canvasCtx.fill();
 
-            // Ball Movement
-            ball.x += ball.dx;
-            ball.y += ball.dy;
-
-            // Walls
-            if(ball.x + ball.radius > canvasElement.width || ball.x - ball.radius < 0) ball.dx *= -1;
-            if(ball.y - ball.radius < 0) ball.dy *= -1;
-
-            // Paddle Hit
-            if(ball.y + ball.radius > canvasElement.height - 40) {
-                if(ball.x > paddleX - 75 && ball.x < paddleX + 75) {
-                    ball.dy *= -1;
-                    score++;
-                    scoreElement.innerText = score;
-                } else if (ball.y > canvasElement.height) {
-                    // Reset Game
-                    ball.y = 100;
-                    score = 0;
-                    scoreElement.innerText = score;
+                    // 2. 咒語文字特效
+                    canvasCtx.shadowBlur = 10;
+                    canvasCtx.fillStyle = "white";
+                    canvasCtx.font = "30px Cinzel Decorative";
+                    canvasCtx.fillText("Expelliarmus!", x + 40, y - 20);
                 }
             }
-
-            requestAnimationFrame(draw);
+            canvasCtx.restore();
         }
-
-        draw();
     </script>
 </body>
 </html>

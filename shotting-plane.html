@@ -1,70 +1,215 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
-    <title>Quidditch Seeker</title>
+    <meta charset="UTF-8">
+    <title>Quidditch Seeker: Extreme Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #0b0d17; overflow: hidden; font-family: 'Cinzel Decorative', cursive; }
-        canvas { display: block; background: linear-gradient(to bottom, #1a1b3a 0%, #070810 100%); cursor: none; }
-        .hud { position: absolute; top: 20px; width: 100%; text-align: center; color: #d4af37; pointer-events: none; text-shadow: 0 0 10px #000; }
-        .back-btn { position: absolute; top: 20px; left: 20px; color: #d4af37; text-decoration: none; border: 1px solid #d4af37; padding: 5px 15px; border-radius: 20px; z-index: 100; }
+        * { margin: 0; padding: 0; }
+        body { background: #000; overflow: hidden; font-family: 'Cinzel Decorative', cursive; }
+        #ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 60px;
+            display: flex; justify-content: space-around; align-items: center;
+            background: linear-gradient(180deg, rgba(212,175,55,0.2), transparent);
+            color: #d4af37; font-size: 1.2rem; z-index: 10;
+        }
+        canvas { display: block; filter: contrast(1.2); }
+        #game-over {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; color: white; display: none; background: rgba(0,0,0,0.8);
+            padding: 40px; border: 2px solid #d4af37;
+        }
     </style>
 </head>
 <body>
-    <a href="index.html" class="back-btn">⬅ 離開球場</a>
-    <div class="hud">
-        <h2 id="score">分數: 0</h2>
-        <p>方向鍵飛行 | 空白鍵施展咒語</p>
+
+    <div id="ui">
+        <div>SCORE: <span id="score">0</span></div>
+        <div>MANA: <span id="mana">100</span>%</div>
+        <a href="index.html" style="color:#d4af37; text-decoration:none;">[EXIT]</a>
     </div>
-    <canvas id="gameCanvas"></canvas>
+
+    <div id="game-over">
+        <h1 style="color: #d4af37; font-size: 3rem;">MISCHIEF MANAGED</h1>
+        <p id="final-score" style="margin: 20px 0;"></p>
+        <button onclick="location.reload()" style="padding: 10px 20px; cursor: pointer; background: #d4af37; border: none;">RETRY</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
 
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const manaEl = document.getElementById('mana');
+
+        // 初始化屏幕
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        // 遊戲物件
+        let player = { x: 100, y: canvas.height/2, w: 90, h: 40, speed: 8, hp: 100 };
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
         let score = 0;
-        let broom = { x: 100, y: canvas.height/2, w: 80, h: 30 };
-        let spells = [];
-        let enemies = []; // 博格 Bludgers
+        let mana = 100;
+        let frames = 0;
+        let gameOver = false;
+
+        // 監聽按鍵
         let keys = {};
+        window.onkeydown = (e) => keys[e.code] = true;
+        window.onkeyup = (e) => keys[e.code] = false;
 
-        window.addEventListener("keydown", e => keys[e.code] = true);
-        window.addEventListener("keyup", e => keys[e.code] = false);
-
-        function drawBroom() {
-            // 畫掃帚身
-            ctx.fillStyle = "#4e2c14";
-            ctx.fillRect(broom.x, broom.y + 10, broom.w - 20, 8);
-            // 畫掃帚尾
-            ctx.fillStyle = "#8b4513";
-            ctx.beginPath();
-            ctx.moveTo(broom.x, broom.y + 14);
-            ctx.lineTo(broom.x - 20, broom.y);
-            ctx.lineTo(broom.x - 20, broom.y + 28);
-            ctx.fill();
-            // 魔法光芒
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = "#d4af37";
-        }
-
-        function spawnEnemy() {
-            if (Math.random() < 0.03) {
-                enemies.push({ x: canvas.width, y: Math.random() * (canvas.height - 50), r: 15, color: "#333" });
+        // 粒子特效類
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 5 + 1;
+                this.speedX = (Math.random() - 0.5) * 10;
+                this.speedY = (Math.random() - 0.5) * 10;
+                this.color = color;
+                this.alpha = 1;
+            }
+            update() {
+                this.x += this.speedX; this.y += this.speedY;
+                this.alpha -= 0.02;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
             }
         }
 
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.shadowBlur = 0;
+        function createExplosion(x, y, color) {
+            for(let i=0; i<20; i++) particles.push(new Particle(x, y, color));
+        }
 
-            // 隨機星空背景
-            ctx.fillStyle = "white";
-            for(let i=0; i<5; i++) ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
+        // 敵機類 (博格)
+        class Enemy {
+            constructor() {
+                this.x = canvas.width + 50;
+                this.y = Math.random() * (canvas.height - 100) + 50;
+                this.size = Math.random() * 30 + 20;
+                this.speed = Math.random() * 3 + 4 + (score/100); // 隨分數變快
+                this.hp = 2;
+            }
+            update() {
+                this.x -= this.speed;
+                this.rotation += 0.1;
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.fillStyle = "#333";
+                ctx.shadowBlur = 10; ctx.shadowColor = "red";
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size/2, 0, Math.PI*2);
+                ctx.fill();
+                // 畫血條
+                ctx.fillStyle = "red";
+                ctx.fillRect(-this.size/2, -this.size/2 - 10, (this.hp/2)*this.size, 5);
+                ctx.restore();
+            }
+        }
 
-            // 控制掃帚
-            if (keys["ArrowUp"] && broom.y > 0) broom.y -= 7;
-            if (keys["ArrowDown"] && broom.y < canvas.height - 30) broom.y += 7;
-            if (keys["Space"]) {
-                spells.push({ x: broom.x + broom.w, y: broom.y
+        function handleLogic() {
+            if (keys['ArrowUp'] && player.y > 60) player.y -= player.speed;
+            if (keys['ArrowDown'] && player.y < canvas.height - 40) player.y += player.speed;
+            
+            // 射擊冷卻與法力
+            if (keys['Space'] && mana > 10) {
+                bullets.push({x: player.x + 80, y: player.y + 20, v: 12});
+                mana -= 5;
+                keys['Space'] = false;
+            }
+            if (mana < 100) mana += 0.2; // 法力恢復
+            manaEl.innerText = Math.floor(mana);
+
+            // 更新咒語
+            bullets.forEach((b, i) => {
+                b.x += b.v;
+                if(b.x > canvas.width) bullets.splice(i, 1);
+            });
+
+            // 生成敵人
+            if (frames % 60 === 0) enemies.push(new Enemy());
+
+            // 碰撞檢測
+            enemies.forEach((e, i) => {
+                e.update();
+                // 撞到玩家
+                if (Math.hypot(e.x - player.x, e.y - player.y) < e.size) {
+                    endGame();
+                }
+                // 咒語打中敵人
+                bullets.forEach((b, bi) => {
+                    if (Math.hypot(b.x - e.x, b.y - e.y) < e.size) {
+                        e.hp--;
+                        bullets.splice(bi, 1);
+                        if(e.hp <= 0) {
+                            createExplosion(e.x, e.y, "#d4af37");
+                            enemies.splice(i, 1);
+                            score += 20;
+                            scoreEl.innerText = score;
+                        }
+                    }
+                });
+                if(e.x < -50) enemies.splice(i, 1);
+            });
+
+            particles.forEach((p, i) => {
+                p.update();
+                if(p.alpha <= 0) particles.splice(i, 1);
+            });
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // 拖尾效果
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 畫玩家 (掃帚)
+            ctx.save();
+            ctx.shadowBlur = 20; ctx.shadowColor = "#d4af37";
+            ctx.fillStyle = "#8b4513";
+            ctx.fillRect(player.x, player.y + 15, 60, 10); // 掃帚柄
+            ctx.fillStyle = "#d4af37";
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y + 20);
+            ctx.lineTo(player.x - 30, player.y);
+            ctx.lineTo(player.x - 30, player.y + 40);
+            ctx.fill();
+            ctx.restore();
+
+            bullets.forEach(b => {
+                ctx.fillStyle = "#00f3ff";
+                ctx.shadowBlur = 10; ctx.shadowColor = "#00f3ff";
+                ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, Math.PI*2); ctx.fill();
+            });
+
+            enemies.forEach(e => e.draw());
+            particles.forEach(p => p.draw());
+
+            if(!gameOver) {
+                handleLogic();
+                frames++;
+                requestAnimationFrame(draw);
+            }
+        }
+
+        function endGame() {
+            gameOver = true;
+            document.getElementById('game-over').style.display = 'block';
+            document.getElementById('final-score').innerText = "FINAL SCORE: " + score;
+        }
+
+        draw();
+    </script>
+</body>
+</html>

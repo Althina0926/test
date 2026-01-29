@@ -1,83 +1,52 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Wand Mastery</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative&display=swap" rel="stylesheet">
+    <title>Wand Mini</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
-        body { margin: 0; background: #000; color: #d4af37; font-family: 'Cinzel Decorative', cursive; overflow: hidden; }
-        #canvas-container { position: relative; width: 100vw; height: 100vh; }
-        canvas { width: 100%; height: 100%; object-fit: cover; }
-        .ui-overlay { position: absolute; top: 20px; left: 0; width: 100%; text-align: center; z-index: 10; pointer-events: none; }
-        .start-btn { pointer-events: auto; background: #d4af37; border: none; padding: 15px 30px; font-family: inherit; font-size: 1.2rem; cursor: pointer; border-radius: 50px; box-shadow: 0 0 20px #d4af37; }
+        body { background: #111; color: gold; text-align: center; font-family: sans-serif; }
+        /* 確保畫面上移，唔會過長 */
+        canvas { border: 2px solid gold; width: 80%; max-height: 400px; }
+        #video { display: none; }
     </style>
 </head>
 <body>
-    <div class="ui-overlay">
-        <h1>魔杖練習場</h1>
-        <button class="start-btn" onclick="initMagic()">✨ 握住你的魔杖 (點擊開始)</button>
-    </div>
-    <div id="canvas-container">
-        <video id="input_video" style="display:none"></video>
-        <canvas id="output_canvas"></canvas>
-    </div>
+    <h3>魔法測試 (撳制開始)</h3>
+    <button id="start" style="padding: 10px 20px; background: gold; border: none; font-weight: bold; cursor: pointer;">✨ 開啟魔杖</button>
+    <p id="msg">等候指令...</p>
+    <canvas id="out"></canvas>
+    <video id="video"></video>
 
     <script>
-        const videoElement = document.getElementById('input_video');
-        const canvasElement = document.getElementById('output_canvas');
-        const canvasCtx = canvasElement.getContext('2d');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('out');
+        const ctx = canvas.getContext('2d');
 
-        function initMagic() {
-            document.querySelector('.start-btn').style.display = 'none';
-            const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7 });
-            hands.onResults(onResults);
-            const camera = new Camera(videoElement, {
-                onFrame: async () => { await hands.send({image: videoElement}); },
-                width: 1280, height: 720
-            });
-            camera.start();
-        }
-
-        function onResults(results) {
-            canvasElement.width = window.innerWidth;
-            canvasElement.height = window.innerHeight;
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        document.getElementById('start').onclick = async function() {
+            this.style.display = 'none';
+            document.getElementById('msg').innerText = "魔力注入中... (請允許 Camera)";
             
-            // 背景深藍魔法色
-            canvasCtx.fillStyle = "rgba(10, 10, 30, 0.8)";
-            canvasCtx.fillRect(0,0, canvasElement.width, canvasElement.height);
-
-            if (results.multiHandLandmarks) {
-                for (const landmarks of results.multiHandLandmarks) {
-                    // 指尖座標 (Landmark 8)
-                    const x = (1 - landmarks[8].x) * canvasElement.width;
-                    const y = landmarks[8].y * canvasElement.height;
-
-                    // 1. 畫出魔法路徑
-                    canvasCtx.shadowBlur = 30;
-                    canvasCtx.shadowColor = "#ff3300";
-                    let g = canvasCtx.createRadialGradient(x, y, 0, x, y, 40);
-                    g.addColorStop(0, "white");
-                    g.addColorStop(0.2, "#ff3300");
-                    g.addColorStop(1, "transparent");
-                    
-                    canvasCtx.fillStyle = g;
-                    canvasCtx.beginPath();
-                    canvasCtx.arc(x, y, 40, 0, Math.PI*2);
-                    canvasCtx.fill();
-
-                    // 2. 咒語文字特效
-                    canvasCtx.shadowBlur = 10;
-                    canvasCtx.fillStyle = "white";
-                    canvasCtx.font = "30px Cinzel Decorative";
-                    canvasCtx.fillText("Expelliarmus!", x + 40, y - 20);
+            const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+            hands.setOptions({ maxNumHands: 1, minDetectionConfidence: 0.5 });
+            hands.onResults(res => {
+                document.getElementById('msg').innerText = "魔杖已連線！";
+                canvas.width = 640; canvas.height = 480;
+                ctx.fillStyle = "black"; ctx.fillRect(0,0,640,480);
+                if (res.multiHandLandmarks) {
+                    for (const lm of res.multiHandLandmarks) {
+                        const x = (1 - lm[8].x) * 640;
+                        const y = lm[8].y * 480;
+                        ctx.shadowBlur = 20; ctx.shadowColor = "white";
+                        ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI*2); ctx.fill();
+                        ctx.font = "30px sans-serif"; ctx.fillText("⚡ LUMOS!", x + 30, y);
+                    }
                 }
-            }
-            canvasCtx.restore();
-        }
+            });
+
+            const cam = new Camera(video, { onFrame: async () => { await hands.send({image: video}); }, width: 640, height: 480 });
+            cam.start();
+        };
     </script>
 </body>
 </html>

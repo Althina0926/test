@@ -1,60 +1,241 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Whack-A-Mole!</title>
+    <meta charset="UTF-8">
+    <title>Quidditch Seeker | Full Magic Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
     <style>
-        body { text-align: center; font-family: sans-serif; background: #222; color: white; }
-        .grid { display: grid; grid-template-columns: repeat(3, 150px); gap: 10px; justify-content: center; margin-top: 20px; }
-        .hole { width: 150px; height: 150px; background: #442; border: 5px solid #663; border-radius: 50%; cursor: crosshair; position: relative; overflow: hidden; }
-        .mole { width: 100px; height: 100px; background: #a67c52; border-radius: 50% 50% 20% 20%; position: absolute; left: 25px; top: 150px; transition: top 0.1s; }
-        .mole.up { top: 30px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #050505; 
+            color: #d4af37; 
+            font-family: 'Cinzel Decorative', cursive; 
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* The Game HUD (Heads-up Display) */
+        #hud {
+            position: absolute;
+            top: 0; width: 100%;
+            height: 80px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            z-index: 10;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        #gameCanvas {
+            display: block;
+            background: radial-gradient(circle at center, #1a1b3a 0%, #050505 100%);
+        }
+
+        .stats { font-size: 1.5rem; text-shadow: 0 0 10px #d4af37; }
+        .back-btn { color: #fff; text-decoration: none; border: 1px solid #d4af37; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; }
+        .back-btn:hover { background: #d4af37; color: black; }
     </style>
 </head>
 <body>
-    <h1>Score: <span id="score">0</span></h1>
-    <div class="grid">
-        <div class="hole"><div class="mole"></div></div>
-        <div class="hole"><div class="mole"></div></div>
-        <div class="hole"><div class="mole"></div></div>
-        <div class="hole"><div class="mole"></div></div>
-        <div class="hole"><div class="mole"></div></div>
-        <div class="hole"><div class="mole"></div></div>
+
+    <div id="hud">
+        <a href="index.html" class="back-btn">⬅ LEAVE PITCH</a>
+        <div class="stats">SCORE: <span id="score">0</span></div>
+        <div class="stats">HP: <span id="hp">100</span></div>
     </div>
 
+    <canvas id="gameCanvas"></canvas>
+
     <script>
-        const moles = document.querySelectorAll('.mole');
-        const scoreBoard = document.querySelector('#score');
-        let score = 0;
-        let lastHole;
-        let timeUp = false;
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreEl = document.getElementById("score");
+        const hpEl = document.getElementById("hp");
 
-        function randomTime(min, max) { return Math.round(Math.random() * (max - min) + min); }
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-        function randomHole(moles) {
-            const idx = Math.floor(Math.random() * moles.length);
-            const hole = moles[idx];
-            if (hole === lastHole) return randomHole(moles);
-            lastHole = hole;
-            return hole;
+        // --- Game State ---
+        let gameState = {
+            score: 0,
+            hp: 100,
+            active: true,
+            stars: []
+        };
+
+        // --- Player Object ---
+        let player = {
+            x: 100, y: canvas.height / 2,
+            w: 80, h: 30,
+            speed: 8,
+            targetY: canvas.height / 2
+        };
+
+        let spells = [];
+        let enemies = [];
+        let particles = [];
+
+        // --- Initialization: Create a Starfield ---
+        for(let i=0; i<100; i++) {
+            gameState.stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                s: Math.random() * 2,
+                v: Math.random() * 3 + 1
+            });
         }
 
-        function peep() {
-            const time = randomTime(500, 1000);
-            const mole = randomHole(moles);
-            mole.classList.add('up');
-            setTimeout(() => {
-                mole.classList.remove('up');
-                if (!timeUp) peep();
-            }, time);
+        // --- Input Handling ---
+        let keys = {};
+        window.onkeydown = (e) => keys[e.code] = true;
+        window.onkeyup = (e) => keys[e.code] = false;
+
+        // --- Logic Functions ---
+        function createExplosion(x, y, color) {
+            for(let i=0; i<15; i++) {
+                particles.push({
+                    x, y,
+                    dx: (Math.random() - 0.5) * 8,
+                    dy: (Math.random() - 0.5) * 8,
+                    life: 1.0,
+                    color
+                });
+            }
         }
 
-        moles.forEach(mole => mole.addEventListener('click', function() {
-            score++;
-            this.classList.remove('up');
-            scoreBoard.textContent = score;
-        }));
+        function spawnEnemy() {
+            if (Math.random() < 0.03) {
+                enemies.push({
+                    x: canvas.width + 50,
+                    y: Math.random() * (canvas.height - 100) + 50,
+                    size: 20 + Math.random() * 20,
+                    speed: 4 + Math.random() * 4
+                });
+            }
+        }
 
-        peep(); // Start the game
+        function update() {
+            if (!gameState.active) return;
+
+            // Move Player
+            if (keys["ArrowUp"] && player.y > 100) player.y -= player.speed;
+            if (keys["ArrowDown"] && player.y < canvas.height - 50) player.y += player.speed;
+
+            // Shoot Magic (Space)
+            if (keys["Space"]) {
+                spells.push({ x: player.x + player.w, y: player.y + 15 });
+                keys["Space"] = false; // Semi-auto fire
+            }
+
+            // Move Stars (Background)
+            gameState.stars.forEach(s => {
+                s.x -= s.v;
+                if(s.x < 0) s.x = canvas.width;
+            });
+
+            // Move Spells
+            spells.forEach((s, i) => {
+                s.x += 15;
+                if (s.x > canvas.width) spells.splice(i, 1);
+            });
+
+            // Move Enemies & Collision
+            enemies.forEach((e, i) => {
+                e.x -= e.speed;
+
+                // Collision with player
+                if (Math.hypot(player.x - e.x, player.y - e.y) < e.size + 20) {
+                    gameState.hp -= 20;
+                    hpEl.innerText = gameState.hp;
+                    createExplosion(e.x, e.y, "#ff0000");
+                    enemies.splice(i, 1);
+                    if (gameState.hp <= 0) {
+                        gameState.active = false;
+                        alert("Wasted! Your Score: " + gameState.score);
+                        location.reload();
+                    }
+                }
+
+                // Collision with spells
+                spells.forEach((s, si) => {
+                    if (Math.hypot(s.x - e.x, s.y - e.y) < e.size) {
+                        createExplosion(e.x, e.y, "#d4af37");
+                        enemies.splice(i, 1);
+                        spells.splice(si, 1);
+                        gameState.score += 10;
+                        scoreEl.innerText = gameState.score;
+                    }
+                });
+
+                if (e.x < -100) enemies.splice(i, 1);
+            });
+
+            // Update Particles
+            particles.forEach((p, i) => {
+                p.x += p.dx; p.y += p.dy;
+                p.life -= 0.02;
+                if(p.life <= 0) particles.splice(i, 1);
+            });
+
+            spawnEnemy();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Starfield
+            ctx.fillStyle = "white";
+            gameState.stars.forEach(s => {
+                ctx.globalAlpha = s.s / 2;
+                ctx.fillRect(s.x, s.y, s.s, s.s);
+            });
+            ctx.globalAlpha = 1.0;
+
+            // 2. Draw Player (Broomstick with Glow)
+            ctx.shadowBlur = 20; ctx.shadowColor = "#d4af37";
+            ctx.fillStyle = "#5d3a1a"; // Wood
+            ctx.fillRect(player.x, player.y + 10, 60, 8);
+            ctx.fillStyle = "#d4af37"; // Bristles
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y + 14);
+            ctx.lineTo(player.x - 30, player.y - 5);
+            ctx.lineTo(player.x - 30, player.y + 35);
+            ctx.fill();
+
+            // 3. Draw Spells (Stupefy)
+            ctx.shadowColor = "#00f3ff";
+            ctx.fillStyle = "#fff";
+            spells.forEach(s => {
+                ctx.beginPath(); ctx.arc(s.x, s.y, 6, 0, Math.PI*2); ctx.fill();
+            });
+
+            // 4. Draw Enemies (Bludgers)
+            ctx.shadowColor = "#ff0000";
+            ctx.fillStyle = "#222";
+            enemies.forEach(e => {
+                ctx.beginPath(); ctx.arc(e.x, e.y, e.size/2, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = "#444"; ctx.stroke();
+            });
+
+            // 5. Draw Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 4, 4);
+            });
+            ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
+
+            update();
+            requestAnimationFrame(draw);
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        draw();
     </script>
 </body>
 </html>

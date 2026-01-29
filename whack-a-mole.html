@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Whack-A-Mole!</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #222; color: white; }
+        .grid { display: grid; grid-template-columns: repeat(3, 150px); gap: 10px; justify-content: center; margin-top: 20px; }
+        .hole { width: 150px; height: 150px; background: #442; border: 5px solid #663; border-radius: 50%; cursor: crosshair; position: relative; overflow: hidden; }
+        .mole { width: 100px; height: 100px; background: #a67c52; border-radius: 50% 50% 20% 20%; position: absolute; left: 25px; top: 150px; transition: top 0.1s; }
+        .mole.up { top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>Score: <span id="score">0</span></h1>
+    <div class="grid">
+        <div class="hole"><div class="mole"></div></div>
+        <div class="hole"><div class="mole"></div></div>
+        <div class="hole"><div class="mole"></div></div>
+        <div class="hole"><div class="mole"></div></div>
+        <div class="hole"><div class="mole"></div></div>
+        <div class="hole"><div class="mole"></div></div>
+    </div>
+
+    <script>
+        const moles = document.querySelectorAll('.mole');
+        const scoreBoard = document.querySelector('#score');
+        let score = 0;
+        let lastHole;
+        let timeUp = false;
+
+        function randomTime(min, max) { return Math.round(Math.random() * (max - min) + min); }
+
+        function randomHole(moles) {
+            const idx = Math.floor(Math.random() * moles.length);
+            const hole = moles[idx];
+            if (hole === lastHole) return randomHole(moles);
+            lastHole = hole;
+            return hole;
+        }
+
+        function peep() {
+            const time = randomTime(500, 1000);
+            const mole = randomHole(moles);
+            mole.classList.add('up');
+            setTimeout(() => {
+                mole.classList.remove('up');
+                if (!timeUp) peep();
+            }, time);
+        }
+
+        moles.forEach(mole => mole.addEventListener('click', function() {
+            score++;
+            this.classList.remove('up');
+            scoreBoard.textContent = score;
+        }));
+
+        peep(); // Start the game
+    </script>
+</body>
+</html>

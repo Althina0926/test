@@ -9,9 +9,81 @@
         .hole { width: 120px; height: 120px; background: #3d2b1f; border-radius: 50%; position: relative; overflow: hidden; border: 4px solid #d4af37; }
         .mole { width: 80px; height: 80px; background: #a67c52; border-radius: 50%; position: absolute; left: 20px; top: 120px; transition: 0.2s; cursor: pointer; }
         .mole.up { top: 20px; }
+        
+        /* Start screen overlay */
+        #startScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 18, 11, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: #d4af37;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        #startScreen h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.8);
+        }
+        
+        #startScreen p {
+            font-size: 1.2rem;
+            margin: 10px 0;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+        
+        #startScreen .instructions {
+            background: rgba(61, 43, 31, 0.5);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            max-width: 500px;
+        }
+        
+        #startScreen .startHint {
+            margin-top: 30px;
+            font-size: 1.5rem;
+            color: #ffd700;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
+    <div id="startScreen">
+        <h1>Dobby's Training</h1>
+        <p>Help Dobby practice his magic by clicking on the appearing socks!</p>
+        
+        <div class="instructions">
+            <h3>How to Play:</h3>
+            <p>Click on the socks as they pop up from the holes.</p>
+            <p>Each successful click scores 1 point.</p>
+            <p>Be quick - they disappear fast!</p>
+            <p>Use your mouse to click or tap on mobile devices.</p>
+        </div>
+        
+        <p class="startHint">Press any key or click to start the game...</p>
+    </div>
+    
     <h1>Score: <span id="score">0</span></h1>
     <div class="grid">
         <div class="hole"><div class="mole" onclick="hit(this)"></div></div>
@@ -24,20 +96,46 @@
     <p><a href="index.html" style="color:#d4af37">⬅ Return to Common Room</a></p>
 
     <script>
-        let score = 0;
-        function hit(el) {
-            if(!el.classList.contains('up')) return;
-            score++;
-            document.getElementById('score').innerText = score;
-            el.classList.remove('up');
+        const startScreen = document.getElementById('startScreen');
+        let gameStarted = false;
+        
+        function startGame() {
+            if (gameStarted) return;
+            gameStarted = true;
+            startScreen.classList.add("hidden");
+            initGame();
         }
-        function peep() {
-            const moles = document.querySelectorAll('.mole');
-            const mole = moles[Math.floor(Math.random()*moles.length)];
-            mole.classList.add('up');
-            setTimeout(() => { mole.classList.remove('up'); peep(); }, Math.random()*1000 + 500);
+        
+        // Start game on any key press
+        document.addEventListener("keydown", function(e) {
+            if (!gameStarted) {
+                startGame();
+            }
+        });
+        
+        // Also allow click to start
+        startScreen.addEventListener("click", startGame);
+        
+        function initGame() {
+            let score = 0;
+            function hit(el) {
+                if(!el.classList.contains('up')) return;
+                score++;
+                document.getElementById('score').innerText = score;
+                el.classList.remove('up');
+            }
+            
+            // Attach hit function to global scope for onclick
+            window.hit = hit;
+            
+            function peep() {
+                const moles = document.querySelectorAll('.mole');
+                const mole = moles[Math.floor(Math.random()*moles.length)];
+                mole.classList.add('up');
+                setTimeout(() => { mole.classList.remove('up'); peep(); }, Math.random()*1000 + 500);
+            }
+            peep();
         }
-        peep();
     </script>
 </body>
 </html>

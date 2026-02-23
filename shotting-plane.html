@@ -33,9 +33,94 @@
         .btn-back:hover { background: #d4af37; color: black; }
 
         canvas { display: block; background: radial-gradient(circle, #1a1b3a 0%, #000 100%); }
+        
+        /* Start screen overlay */
+        #startScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: #d4af37;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        #startScreen h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.8);
+        }
+        
+        #startScreen p {
+            font-size: 1.2rem;
+            margin: 10px 0;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+        
+        #startScreen .instructions {
+            background: rgba(26, 27, 58, 0.5);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            max-width: 500px;
+        }
+        
+        #startScreen .key {
+            display: inline-block;
+            background: #1a1b3a;
+            border: 1px solid #d4af37;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin: 0 5px;
+            font-family: monospace;
+        }
+        
+        #startScreen .startHint {
+            margin-top: 30px;
+            font-size: 1.5rem;
+            color: #ffd700;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
+
+    <div id="startScreen">
+        <h1>Quidditch Seeker</h1>
+        <p>Fly your broomstick and defend against Bludgers!</p>
+        
+        <div class="instructions">
+            <h3>How to Play:</h3>
+            <p>Control your broomstick with arrow keys:</p>
+            <p><span class="key">↑</span> Move Up</p>
+            <p><span class="key">↓</span> Move Down</p>
+            <p><span class="key">←</span> Move Left</p>
+            <p><span class="key">→</span> Move Right</p>
+            <p>Press <span class="key">SPACE</span> to cast spells and destroy Bludgers.</p>
+            <p>Avoid letting Bludgers pass you!</p>
+        </div>
+        
+        <p class="startHint">Press any key to start the game...</p>
+    </div>
 
     <div id="ui-layer">
         <a href="index.html" class="btn-back">⬅ EXIT</a>
@@ -49,6 +134,7 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreEl = document.getElementById("scoreDisplay");
+        const startScreen = document.getElementById("startScreen");
 
         // 1. Setup Canvas to fill screen
         function resize() {
@@ -64,13 +150,38 @@
         let bullets = [];
         let enemies = [];
         let keys = {};
+        let gameStarted = false;
 
-        // 3. Input Handling
-        window.addEventListener("keydown", function(e) { keys[e.code] = true; });
-        window.addEventListener("keyup", function(e) { keys[e.code] = false; });
+        // 3. Start Game Function
+        function startGame() {
+            if (gameStarted) return;
+            gameStarted = true;
+            startScreen.classList.add("hidden");
+            gameLoop();
+        }
+
+        // Start game on any key press
+        document.addEventListener("keydown", function(e) {
+            if (!gameStarted) {
+                startGame();
+                // Don't capture the key for game actions
+                return;
+            }
+            keys[e.code] = true;
+        });
+        
+        document.addEventListener("keyup", function(e) {
+            if (!gameStarted) return;
+            keys[e.code] = false;
+        });
+
+        // Also allow click to start
+        startScreen.addEventListener("click", startGame);
 
         // 4. The Game Loop
         function gameLoop() {
+            if (!gameStarted) return;
+            
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear screen
 
             // --- PLAYER LOGIC ---
@@ -161,8 +272,7 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Start the game
-        gameLoop();
+        // Game will start after key press via startGame()
     </script>
 </body>
 </html>

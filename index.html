@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hogwarts' Enchanted Game Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;700&family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "gold-metallic": "#d4af37",
+                        "gold-bright": "#ffcf40",
+                        "crimson-deep": "#2a0202",
+                        "crimson-moody": "#1a0101",
+                        "leather-dark": "#1a130f",
+                        "stone-tablet": "#2c2c2c",
+                        // Light theme colors
+                        "parchment-light": "#f5f1e8",
+                        "stone-light": "#e8e3d7",
+                        "leather-light": "#d8c9b5",
+                        "crimson-light": "#5a2a2a",
+                        "gold-light": "#b8941f",
+                    },
+                    fontFamily: {
+                        "magic": ["Cinzel Decorative", "serif"],
+                        "serif-body": ["EB Garamond", "serif"],
+                        "classic": ["Cinzel", "serif"],
+                    },
+                    keyframes: {
+                        'float-particle': {
+                            '0%, 100%': { transform: 'translate(0, 0) opacity(0.3)' },
+                            '50%': { transform: 'translate(20px, -40px) opacity(0.8)' },
+                        },
+                        'shimmer-vibrate': {
+                            '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
+                            '50%': { opacity: '1', transform: 'scale(1.005)' },
+                        },
+                        'smoke': {
+                            '0%': { transform: 'translateX(-100%) translateY(0) scale(1)', opacity: '0' },
+                            '50%': { opacity: '0.1' },
+                            '100%': { transform: 'translateX(100%) translateY(-20px) scale(1.5)', opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        'float-slow': 'float-particle 8s ease-in-out infinite',
+                        'shimmer': 'shimmer-vibrate 3s ease-in-out infinite',
+                        'smoke-flow': 'smoke 15s linear infinite',
+                    }
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .bg-leather {
+                background-color: #d8c9b5;
+                background-image: url("https://www.transparenttextures.com/patterns/paper.png");
+            }
+            .dark .bg-leather {
+                background-color: #1a130f;
+                background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png");
+            }
+            .bg-stone {
+                background-color: #e8e3d7;
+                background-image: url("https://www.transparenttextures.com/patterns/paper.png");
+                box-shadow: inset 0 0 20px rgba(0,0,0,0.1), 0 10px 20px rgba(0,0,0,0.1);
+            }
+            .dark .bg-stone {
+                background-color: #2c2c2c;
+                background-image: url("https://www.transparenttextures.com/patterns/stardust.png");
+                box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 20px 40px rgba(0,0,0,0.9);
+            }
+            .gold-text-glow {
+                color: #b8941f;
+                text-shadow: 0 0 8px rgba(184, 148, 31, 0.5);
+            }
+            .dark .gold-text-glow {
+                color: #d4af37;
+                text-shadow: 0 0 12px rgba(212, 175, 55, 0.6), 0 0 4px rgba(255, 255, 255, 0.4);
+            }
+            .ember-particle {
+                @apply absolute w-1 h-1 bg-gold-bright rounded-full;
+                filter: blur(1px) drop-shadow(0 0 5px #ffcf40);
+            }
+            .magic-smoke {
+                @apply absolute inset-0 opacity-20 pointer-events-none;
+                background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 70%);
+                filter: blur(40px);
+            }
+            .filigree-border {
+                border: 2px solid transparent;
+                border-image: linear-gradient(to bottom right, #d4af37, #4a3710, #d4af37) 1;
+                position: relative;
+            }
+            .shimmering-border {
+                position: absolute;
+                inset: -2px;
+                border: 1px solid rgba(212, 175, 55, 0.4);
+                pointer-events: none;
+                z-index: 5;
+            }
+            .rune-button {
+                background: linear-gradient(135deg, #5a2a2a 0%, #8a4a4a 100%);
+                border: 1px solid #b8941f;
+                box-shadow: 0 0 15px rgba(184, 148, 31, 0.3);
+                position: relative;
+                overflow: hidden;
+            }
+            .dark .rune-button {
+                background: linear-gradient(135deg, #2a0202 0%, #4a0606 100%);
+                border: 1px solid #d4af37;
+                box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+            }
+            .ray-glow {
+                position: absolute;
+                inset: -50%;
+                background: conic-gradient(from 0deg, transparent, rgba(212,175,55,0.1), transparent 10%, transparent);
+                animation: spin 10s linear infinite;
+            }
+            .lens-flare {
+                position: absolute;
+                top: -20px;
+                right: -20px;
+                width: 150px;
+                height: 150px;
+                background: radial-gradient(circle, rgba(255,207,64,0.3) 0%, rgba(255,207,64,0.1) 40%, transparent 70%);
+                filter: blur(10px);
+                z-index: 50;
+                pointer-events: none;
+            }
+            .lens-flare::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 200%;
+                height: 1px;
+                background: linear-gradient(90deg, transparent, rgba(255,207,64,0.4), transparent);
+                transform: translate(-50%, -50%) rotate(-45deg);
+            }
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-parchment-light text-stone-800 dark:bg-black dark:text-stone-200 font-serif-body antialiased">
+<div class="relative flex h-screen w-full flex-col overflow-hidden bg-leather max-w-[430px] mx-auto shadow-[0_0_100px_rgba(0,0,0,1)]">
+<div class="lens-flare"></div>
+<div class="magic-smoke animate-smoke-flow"></div>
+<div class="absolute inset-0 pointer-events-none z-20">
+<div class="ember-particle animate-float-slow top-[20%] left-[10%]" style="animation-delay: 0s;"></div>
+<div class="ember-particle animate-float-slow top-[50%] left-[80%] w-0.5 h-0.5" style="animation-delay: 2s;"></div>
+<div class="ember-particle animate-float-slow top-[70%] left-[30%]" style="animation-delay: 4s;"></div>
+<div class="ember-particle animate-float-slow top-[15%] left-[60%] w-1.5 h-1.5" style="animation-delay: 1s;"></div>
+</div>
+<header class="relative z-30 flex flex-col items-center pt-10 pb-6 px-6 bg-gradient-to-b from-crimson-moody to-transparent border-b border-gold-metallic/10">
+<div class="flex items-center justify-between w-full mb-3">
+<span class="material-symbols-outlined text-gold-metallic text-2xl gold-text-glow">flare</span>
+<h1 class="font-magic text-gold-metallic text-2xl font-black tracking-[0.1em] text-center gold-text-glow leading-none uppercase">
+                Hogwarts'<br/><span class="text-lg">Game Center</span>
+</h1>
+<button id="theme-toggle" class="material-symbols-outlined text-gold-metallic text-2xl gold-text-glow bg-transparent border-none cursor-pointer" aria-label="Toggle dark/light mode">dark_mode</button>
+</div>
+<p class="font-classic text-gold-metallic/60 text-[10px] uppercase tracking-[0.3em] font-bold">
+            I solemnly swear that I am up to no good
+        </p>
+</header>
+<main class="relative z-10 flex-1 overflow-y-auto px-5 py-8 space-y-12 pb-32">
+<article class="relative bg-stone rounded-sm p-0 overflow-hidden border border-white/5 filigree-border">
+<div class="shimmering-border animate-shimmer"></div>
+<div class="absolute top-0 left-0 w-8 h-8 border-t border-l border-gold-metallic/40 m-2"></div>
+<div class="absolute bottom-0 right-0 w-8 h-8 border-b border-r border-gold-metallic/40 m-2"></div>
+<div class="p-6">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-2">
+<h3 class="text-gold-metallic font-classic text-xl font-bold tracking-widest uppercase">Snake Challenge</h3>
+<span class="material-symbols-outlined text-[12px] text-white gold-text-glow">auto_awesome</span>
+</div>
+<span class="material-symbols-outlined text-gold-metallic/50">token</span>
+</div>
+<div class="relative mb-5 aspect-[16/9] overflow-hidden grayscale-[0.3] brightness-75 contrast-125 border border-black/50 shadow-inner">
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=400')] bg-cover bg-center"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+</div>
+<div class="parchment-vignette p-4 rounded-sm border border-stone-800/20 mb-6 rotate-[-0.5deg] relative">
+<span class="absolute -top-1 -right-1 material-symbols-outlined text-[10px] text-gold-bright opacity-70">colors_spark</span>
+<p class="text-crimson-moody text-sm font-bold italic mb-2 font-serif-body">Slytherin's Trial: Navigate the serpent through the cold stone dungeon floor.</p>
+<div class="flex gap-4 text-[10px] text-crimson-moody/70 font-classic font-bold uppercase tracking-wider">
+<span>• Pathfinding</span>
+<span>• Secrets</span>
+<span>• Curses</span>
+</div>
+</div>
+<a href="snake.html" class="rune-button w-full py-4 flex items-center justify-center gap-3 group">
+<div class="ray-glow"></div>
+<span class="font-magic text-gold-metallic tracking-[0.2em] font-bold text-sm z-10 drop-shadow-[0_0_5px_rgba(255,207,64,0.5)]">ᛗ CAST SPELL ᛗ</span>
+</a>
+</div>
+</article>
+<article class="relative bg-stone rounded-sm p-0 overflow-hidden border border-white/5 filigree-border">
+<div class="shimmering-border animate-shimmer" style="animation-delay: 1.5s;"></div>
+<div class="absolute top-0 right-0 w-8 h-8 border-t border-r border-gold-metallic/40 m-2"></div>
+<div class="absolute bottom-0 left-0 w-8 h-8 border-b border-l border-gold-metallic/40 m-2"></div>
+<div class="p-6">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-2">
+<h3 class="text-gold-metallic font-classic text-xl font-bold tracking-widest uppercase">Whack-a-Mole</h3>
+<span class="material-symbols-outlined text-[12px] text-white gold-text-glow">star</span>
+</div>
+<span class="material-symbols-outlined text-gold-metallic/50">psychiatry</span>
+</div>
+<div class="relative mb-5 aspect-[16/9] overflow-hidden grayscale-[0.3] brightness-75 contrast-125 border border-black/50">
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=400')] bg-cover bg-center"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+</div>
+<div class="parchment-vignette p-4 rounded-sm border border-stone-800/20 mb-6 rotate-[0.5deg] relative">
+<span class="absolute -top-1 -left-1 material-symbols-outlined text-[10px] text-gold-bright opacity-70">flare</span>
+<p class="text-crimson-moody text-sm font-bold italic mb-2 font-serif-body">Mandrake Mayhem: Pluck the screaming plants from the enchanted soil.</p>
+<div class="flex gap-4 text-[10px] text-crimson-moody/70 font-classic font-bold uppercase tracking-wider">
+<span>• Reflexes</span>
+<span>• Herbology</span>
+<span>• Speed</span>
+</div>
+</div>
+<a href="whack-a-mole.html" class="rune-button w-full py-4 flex items-center justify-center gap-3 group">
+<div class="ray-glow"></div>
+<span class="font-magic text-gold-metallic tracking-[0.2em] font-bold text-sm z-10 drop-shadow-[0_0_5px_rgba(255,207,64,0.5)]">ᚦ CAST SPELL ᚦ</span>
+</a>
+</div>
+</article>
+<article class="relative bg-stone rounded-sm p-0 overflow-hidden border border-white/5 filigree-border">
+<div class="shimmering-border animate-shimmer" style="animation-delay: 0.7s;"></div>
+<div class="p-6">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-2">
+<h3 class="text-gold-metallic font-classic text-xl font-bold tracking-widest uppercase">Plane Shooter</h3>
+<span class="material-symbols-outlined text-[12px] text-white gold-text-glow">magic_button</span>
+</div>
+<span class="material-symbols-outlined text-gold-metallic/50">cleaning_bucket</span>
+</div>
+<div class="relative mb-5 aspect-[16/9] overflow-hidden grayscale-[0.3] brightness-75 contrast-125 border border-black/50">
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400')] bg-cover bg-center"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+</div>
+<div class="parchment-vignette p-4 rounded-sm border border-stone-800/20 mb-6 rotate-[-0.8deg] relative">
+<span class="absolute -bottom-1 -right-1 material-symbols-outlined text-[10px] text-gold-bright opacity-70">auto_awesome</span>
+<p class="text-crimson-moody text-sm font-bold italic mb-2 font-serif-body">Broomstick Battle: Fly through the shadow clouds and dodge the dark curses.</p>
+<div class="flex gap-4 text-[10px] text-crimson-moody/70 font-classic font-bold uppercase tracking-wider">
+<span>• Combat</span>
+<span>• Agility</span>
+<span>• Flight</span>
+</div>
+</div>
+<a href="shotting-plane.html" class="rune-button w-full py-4 flex items-center justify-center gap-3 group">
+<div class="ray-glow"></div>
+<span class="font-magic text-gold-metallic tracking-[0.2em] font-bold text-sm z-10 drop-shadow-[0_0_5px_rgba(255,207,64,0.5)]">ᚨ CAST SPELL ᚨ</span>
+</a>
+</div>
+</article>
+<article class="relative bg-stone rounded-sm p-0 overflow-hidden border border-white/5 filigree-border">
+<div class="shimmering-border animate-shimmer" style="animation-delay: 0.3s;"></div>
+<div class="absolute top-0 left-0 w-8 h-8 border-t border-l border-gold-metallic/40 m-2"></div>
+<div class="absolute bottom-0 right-0 w-8 h-8 border-b border-r border-gold-metallic/40 m-2"></div>
+<div class="p-6">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-2">
+<h3 class="text-gold-metallic font-classic text-xl font-bold tracking-widest uppercase">Wand Mini</h3>
+<span class="material-symbols-outlined text-[12px] text-white gold-text-glow">magic_button</span>
+</div>
+<span class="material-symbols-outlined text-gold-metallic/50">auto_fix_high</span>
+</div>
+<div class="relative mb-5 aspect-[16/9] overflow-hidden grayscale-[0.3] brightness-75 contrast-125 border border-black/50 shadow-inner">
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400')] bg-cover bg-center"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+</div>
+<div class="parchment-vignette p-4 rounded-sm border border-stone-800/20 mb-6 rotate-[0.3deg] relative">
+<span class="absolute -top-1 -right-1 material-symbols-outlined text-[10px] text-gold-bright opacity-70">colors_spark</span>
+<p class="text-crimson-moody text-sm font-bold italic mb-2 font-serif-body">Master the wand movements to cast spells with hand tracking.</p>
+<div class="flex gap-4 text-[10px] text-crimson-moody/70 font-classic font-bold uppercase tracking-wider">
+<span>• Gesture</span>
+<span>• Magic</span>
+<span>• Precision</span>
+</div>
+</div>
+<a href="motion.html" class="rune-button w-full py-4 flex items-center justify-center gap-3 group">
+<div class="ray-glow"></div>
+<span class="font-magic text-gold-metallic tracking-[0.2em] font-bold text-sm z-10 drop-shadow-[0_0_5px_rgba(255,207,64,0.5)]">ᚹ CAST SPELL ᚹ</span>
+</a>
+</div>
+</article>
+<article class="relative bg-stone rounded-sm p-0 overflow-hidden border border-white/5 filigree-border">
+<div class="shimmering-border animate-shimmer" style="animation-delay: 1.2s;"></div>
+<div class="absolute top-0 right-0 w-8 h-8 border-t border-r border-gold-metallic/40 m-2"></div>
+<div class="absolute bottom-0 left-0 w-8 h-8 border-b border-l border-gold-metallic/40 m-2"></div>
+<div class="p-6">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-2">
+<h3 class="text-gold-metallic font-classic text-xl font-bold tracking-widest uppercase">Dobby's Training</h3>
+<span class="material-symbols-outlined text-[12px] text-white gold-text-glow">star</span>
+</div>
+<span class="material-symbols-outlined text-gold-metallic/50">cleaning</span>
+</div>
+<div class="relative mb-5 aspect-[16/9] overflow-hidden grayscale-[0.3] brightness-75 contrast-125 border border-black/50">
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=400')] bg-cover bg-center"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+</div>
+<div class="parchment-vignette p-4 rounded-sm border border-stone-800/20 mb-6 rotate-[-0.3deg] relative">
+<span class="absolute -bottom-1 -left-1 material-symbols-outlined text-[10px] text-gold-bright opacity-70">flare</span>
+<p class="text-crimson-moody text-sm font-bold italic mb-2 font-serif-body">Help Dobby practice with a magical paddle and ball.</p>
+<div class="flex gap-4 text-[10px] text-crimson-moody/70 font-classic font-bold uppercase tracking-wider">
+<span>• Reflex</span>
+<span>• Training</span>
+<span>• House‑Elf</span>
+</div>
+</div>
+<a href="simple-paddle-ball.html" class="rune-button w-full py-4 flex items-center justify-center gap-3 group">
+<div class="ray-glow"></div>
+<span class="font-magic text-gold-metallic tracking-[0.2em] font-bold text-sm z-10 drop-shadow-[0_0_5px_rgba(255,207,64,0.5)]">ᛞ CAST SPELL ᛞ</span>
+</a>
+</div>
+</article>
+</main>
+<nav class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-crimson-moody via-leather-dark to-transparent border-t border-gold-metallic/20 flex items-center justify-around px-8 z-40 backdrop-blur-md">
+<button class="flex flex-col items-center gap-1 group">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-gold-metallic/10 shadow-[0_0_15px_rgba(212,175,55,0.4)] border border-gold-metallic/20">
+<span class="material-symbols-outlined text-gold-metallic text-2xl" style="font-variation-settings: 'FILL' 1">fort</span>
+</div>
+<span class="text-[9px] font-classic text-gold-metallic uppercase tracking-[0.2em] font-bold">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 opacity-40 group">
+<div class="w-10 h-10 flex items-center justify-center">
+<span class="material-symbols-outlined text-stone-400 text-2xl">trophy</span>
+</div>
+<span class="text-[9px] font-classic text-stone-400 uppercase tracking-[0.2em] font-bold">Rankings</span>
+</button>
+<button class="flex flex-col items-center gap-1 opacity-40 group">
+<div class="w-10 h-10 flex items-center justify-center">
+<span class="material-symbols-outlined text-stone-400 text-2xl">menu_book</span>
+</div>
+<span class="text-[9px] font-classic text-stone-400 uppercase tracking-[0.2em] font-bold">Grimoire</span>
+</button>
+</nav>
+</div>
+<script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+
+    // Check localStorage for theme preference
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme === 'light') {
+        html.classList.remove('dark');
+        themeToggle.textContent = 'light_mode';
+    } else {
+        html.classList.add('dark');
+        themeToggle.textContent = 'dark_mode';
+    }
+
+    themeToggle.addEventListener('click', () => {
+        if (html.classList.contains('dark')) {
+            html.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+            themeToggle.textContent = 'light_mode';
+        } else {
+            html.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            themeToggle.textContent = 'dark_mode';
+        }
+    });
+</script>
+
+</body></html>
